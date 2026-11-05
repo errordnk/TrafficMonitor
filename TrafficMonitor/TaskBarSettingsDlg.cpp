@@ -854,8 +854,10 @@ void CTaskBarSettingsDlg::OnBnClickedSetOrderButton()
     dlg.SetItemOrder(m_data.item_order.GetItemOrderConst());
     dlg.SetDisplayItem(m_data.display_item);
     dlg.SetPluginDisplayItem(m_data.plugin_display_item);
+    dlg.SetGroups(m_data.groups);
     if (dlg.DoModal() == IDOK)
     {
+        m_data.groups = dlg.GetGroups();
         m_data.item_order.SetOrder(dlg.GetItemOrder());
         m_data.display_item = dlg.GetDisplayItem();
         m_data.plugin_display_item = dlg.GetPluginDisplayItem();

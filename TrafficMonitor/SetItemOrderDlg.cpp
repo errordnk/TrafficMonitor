@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "TrafficMonitor.h"
 #include "SetItemOrderDlg.h"
+#include "TaskbarGroupsDlg.h"
 #include "afxdialogex.h"
 
 
@@ -51,6 +52,29 @@ const StringSet& CSetItemOrderDlg::GetPluginDisplayItem() const
     return m_plugin_item;
 }
 
+void CSetItemOrderDlg::SetGroups(const CTaskbarGroupSet& groups)
+{
+    m_groups = groups;
+}
+
+const CTaskbarGroupSet& CSetItemOrderDlg::GetGroups() const
+{
+    return m_groups;
+}
+
+void CSetItemOrderDlg::OnBnClickedGroupSettingsButton()
+{
+    CTaskbarGroupsDlg dlg(m_groups, m_display_item, m_plugin_item, m_all_displayed_item, this);
+    if (dlg.DoModal() == IDOK)
+    {
+        m_groups = dlg.GetGroups();
+        //默认分组使用本对话框中勾选的项目，所以两个对话框共用同一份数据
+        m_display_item = dlg.GetDisplayItem();
+        m_plugin_item = dlg.GetPluginDisplayItem();
+        ShowItem();
+    }
+}
+
 void CSetItemOrderDlg::DoDataExchange(CDataExchange* pDX)
 {
     CBaseDialog::DoDataExchange(pDX);
@@ -64,6 +88,7 @@ BEGIN_MESSAGE_MAP(CSetItemOrderDlg, CBaseDialog)
     ON_BN_CLICKED(IDC_RESTORE_DEFAULT_BUTTON, &CSetItemOrderDlg::OnBnClickedRestoreDefaultButton)
     ON_LBN_SELCHANGE(IDC_LIST1, &CSetItemOrderDlg::OnLbnSelchangeList1)
     ON_CLBN_CHKCHANGE(IDC_LIST1, &CSetItemOrderDlg::OnCheckChanged)
+    ON_BN_CLICKED(IDC_GROUP_SETTINGS_BUTTON, &CSetItemOrderDlg::OnBnClickedGroupSettingsButton)
 END_MESSAGE_MAP()
 
 
@@ -225,7 +250,7 @@ void CSetItemOrderDlg::OnOK()
     //    SaveItemChecked(item, is_checked);
     //}
 
-    if (m_display_item.IsEmpty() && m_plugin_item.data().empty())
+    if (m_display_item.IsEmpty() && m_plugin_item.data().empty() && !m_groups.HasCustomGroupItems())
         m_display_item.Add(TDI_UP);
 
     CBaseDialog::OnOK();

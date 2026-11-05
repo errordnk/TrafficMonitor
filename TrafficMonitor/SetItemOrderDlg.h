@@ -22,6 +22,10 @@ public:
     void SetPluginDisplayItem(const StringSet& plugin_item);
     const StringSet& GetPluginDisplayItem() const;
 
+    //设置/获取任务栏窗口的分组
+    void SetGroups(const CTaskbarGroupSet& groups);
+    const CTaskbarGroupSet& GetGroups() const;
+
     // 对话框数据
 #ifdef AFX_DESIGN_TIME
     enum { IDD = IDD_SELECT_ORDER_DIALOG };
@@ -32,6 +36,7 @@ private:
     CCheckListBox m_list_ctrl;
     DisplayItemSet m_display_item;        //要显示的内置项目
     StringSet m_plugin_item;            //要显示的插件项目
+    CTaskbarGroupSet m_groups;          //任务栏窗口的分组
     std::vector<CommonDisplayItem> m_all_displayed_item;    //在列表中显示的所有项目
 
 protected:
@@ -54,5 +59,6 @@ public:
     afx_msg void OnBnClickedRestoreDefaultButton();
     afx_msg void OnLbnSelchangeList1();
     afx_msg void OnCheckChanged();
+    afx_msg void OnBnClickedGroupSettingsButton();
     virtual void OnOK();
 };

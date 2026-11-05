@@ -127,6 +127,8 @@ protected:
     {
         ItemWidth item_width;
         bool is_double_line{};  //项目是否占两行
+        int group{};            //项目所属分组的序号
+        CRect rect;             //项目在任务栏窗口中的矩形区域
 
         ItemWidthInfo()
         {}
@@ -138,6 +140,18 @@ protected:
 
     std::vector<ItemWidthInfo> m_item_widths;   //任务栏窗口实际显示的每个部分的宽度
     std::map<CommonDisplayItem, CRect> m_item_rects;    //任务栏窗口每个部分的矩形区域
+
+    //每个显示的分组的绘制信息
+    struct GroupLayout
+    {
+        int group_index{};      //分组序号
+        CRect slot_rect;        //分组占用的区域
+        CRect icon_rect;        //分组图标的区域（为空表示没有图标）
+    };
+    std::vector<GroupLayout> m_group_layouts;
+
+    //在上下排列的任务栏中，从x0开始排列m_item_widths[first, last)中的项目，返回占用的宽度
+    int LayoutGroupItems(size_t first, size_t last, int x0);
     CommonDisplayItem m_clicked_item;           //鼠标点击的任务栏项目
 
     std::map<CommonDisplayItem, std::list<int>> m_map_history_data;  //保存各项数据历史数据的链表，链表保存按照时间顺序，越靠近头部数据越新

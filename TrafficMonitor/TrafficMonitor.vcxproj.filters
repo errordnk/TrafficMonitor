@@ -433,6 +433,12 @@
     <ClInclude Include="tinyxml2\tinyxml2.h">
       <Filter>源文件和头文件\公共的类\tinyxml2</Filter>
     </ClInclude>
+    <ClInclude Include="TaskbarGroupsDlg.h">
+      <Filter>源文件和头文件\对话框类\选项设置对话框\SetItemOrderDlg</Filter>
+    </ClInclude>
+    <ClInclude Include="TaskbarGroups.h">
+      <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>
+    </ClInclude>
     <ClInclude Include="TaskbarItemOrderHelper.h">
       <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>
     </ClInclude>
@@ -728,6 +734,12 @@
     </ClCompile>
     <ClCompile Include="tinyxml2\tinyxml2.cpp">
       <Filter>源文件和头文件\公共的类\tinyxml2</Filter>
+    </ClCompile>
+    <ClCompile Include="TaskbarGroupsDlg.cpp">
+      <Filter>源文件和头文件\对话框类\选项设置对话框\SetItemOrderDlg</Filter>
+    </ClCompile>
+    <ClCompile Include="TaskbarGroups.cpp">
+      <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>
     </ClCompile>
     <ClCompile Include="TaskbarItemOrderHelper.cpp">
       <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>

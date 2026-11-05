@@ -464,13 +464,24 @@
 #define ID_PLUGIN_COMMAND_MAX           33664
 #define ID_RESTORE_DEFAULT              33665
 
+#define IDD_TASKBAR_GROUPS_DIALOG       349
+#define IDC_GROUP_SETTINGS_BUTTON       1230
+#define IDC_GROUP_LIST                  1231
+#define IDC_GROUP_ADD_BUTTON            1232
+#define IDC_GROUP_REMOVE_BUTTON         1233
+#define IDC_GROUP_NAME_EDIT             1234
+#define IDC_GROUP_ICON_EDIT             1235
+#define IDC_GROUP_ICON_BROWSE_BUTTON    1236
+#define IDC_GROUP_ITEMS_LIST            1237
+#define IDC_GROUP_WIDTH_EDIT            1238
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        349
+#define _APS_NEXT_RESOURCE_VALUE        350
 #define _APS_NEXT_COMMAND_VALUE         33666
-#define _APS_NEXT_CONTROL_VALUE         1221
+#define _APS_NEXT_CONTROL_VALUE         1239
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -183,10 +183,20 @@ void CTaskBarDlg::ShowInfo(CDC* pDC)
 #endif
               }}});
     IDrawCommon& draw = *draw_common_interface;
+    // 绘制分组图标
+    for (const auto& group_layout : m_group_layouts)
+    {
+        const auto& groups = theApp.m_taskbar_data.groups;
+        if (group_layout.icon_rect.IsRectEmpty() || group_layout.group_index >= groups.GroupCount())
+            continue;
+        HICON group_icon = TaskbarGroupIcons::Get(groups.GetGroup(group_layout.group_index).icon_path, group_layout.icon_rect.Width());
+        if (group_icon != NULL)
+            draw.DrawIcon(group_icon, group_layout.icon_rect.TopLeft(), group_layout.icon_rect.Size());
+    }
     // 绘制任务栏项目
     for (auto iter = m_item_widths.begin(); iter != m_item_widths.end(); ++iter)
     {
-        CRect item_rect = m_item_rects[*iter];
+        CRect item_rect = iter->rect;
         if (!item_rect.IsRectEmpty())
         {
             if (iter->IsPlugin())
@@ -741,13 +751,120 @@ void CTaskBarDlg::SetTextFont()
 void CTaskBarDlg::ApplySettings()
 {
     SetTextFont();
+    TaskbarGroupIcons::Clear();     //图标文件可能已更改，重新加载
     CalculateWindowSize();
+}
+
+int CTaskBarDlg::LayoutGroupItems(size_t first, size_t last, int x0)
+{
+    if (first >= last)
+        return 0;
+
+    const int item_space = DPI(theApp.m_taskbar_data.item_space);
+    if (theApp.m_taskbar_data.horizontal_arrange)   //水平排列时
+    {
+        CRect item_rect(x0, 0, x0, 0);
+        int total_width = 0;
+        for (size_t i = first; i < last; i++)
+        {
+            ItemWidthInfo& item = m_item_widths[i];
+            total_width += item.item_width.TotalWidth();
+            if (i > first)
+                item_rect.MoveToX(item_rect.right + item_space);
+            item_rect.right = item_rect.left + item.item_width.TotalWidth();
+            item_rect.bottom = item_rect.top + m_window_height;
+            item.rect = item_rect;
+        }
+        total_width += item_space * static_cast<int>(last - first);     //加上每个标签间的空隙
+        return total_width;
+    }
+
+    //非水平排列时，每两个一组排列
+    int current_x = x0 + item_space; // 初始 X 坐标为左侧空隙
+
+    //计算两个一组时上下区域的垂直位置
+    int item_height = m_window_height / 2;
+    int y_pos_up = -DPI(theApp.m_taskbar_data.vertical_margin) / 2;
+    int y_pos_down = y_pos_up + item_height + DPI(theApp.m_taskbar_data.vertical_margin);
+
+    int width0 = 0;
+    int max_width0 = 0;
+    bool has_first_item = false;
+    size_t first_index = 0; // 当前列第一个项目的序号，以便后续修正其宽度
+
+    for (size_t i = first; i < last; i++)
+    {
+        ItemWidthInfo& item = m_item_widths[i];
+        if (item.IsDoubleLineExclusive())
+        {
+            // 如果前面有未配对的单行项目，它现在被迫单独成列，应该占两行
+            if (has_first_item)
+            {
+                int col_width = max_width0; // 占两行时，宽度使用 MaxWidth()
+                m_item_widths[first_index].rect.SetRect(current_x, 0, current_x + col_width, m_window_height);
+                m_item_widths[first_index].is_double_line = true;
+
+                current_x += col_width + item_space;
+                has_first_item = false;
+            }
+
+            // 处理当前的独占双行项目，单独成列，占两行
+            int col_width = item.item_width.MaxWidth();
+            item.rect.SetRect(current_x, 0, current_x + col_width, m_window_height);
+            item.is_double_line = true;
+
+            current_x += col_width + item_space;
+        }
+        else
+        {
+            item.is_double_line = false;
+            if (!has_first_item)
+            {
+                // 当前列的第一个项目（上半部分），占一行
+                width0 = item.item_width.TotalWidth();
+                max_width0 = item.item_width.MaxWidth();
+
+                first_index = i;
+                // 暂时设置 rect，right 边界会在配对成功或循环结束时根据列最大宽度进行修正
+                item.rect.SetRect(current_x, y_pos_up, current_x + width0, y_pos_up + item_height);
+
+                has_first_item = true;
+            }
+            else
+            {
+                // 当前列的第二个项目（下半部分），占一行，与第一个项目组成一列
+                int col_width = max(width0, item.item_width.TotalWidth());
+
+                // 修正第一个项目的右边界，确保同一列的两个项目宽度一致
+                m_item_widths[first_index].rect.right = current_x + col_width;
+
+                // 设置第二个项目的矩形区域
+                item.rect.SetRect(current_x, y_pos_down, current_x + col_width, y_pos_down + item_height);
+
+                current_x += col_width + item_space;
+                has_first_item = false;
+            }
+        }
+    }
+
+    // 循环结束后，如果还有未配对的单行项目（例如项目总数为奇数，且最后一个不是独占双行），它单独成列，应该占两行
+    if (has_first_item)
+    {
+        int col_width = max_width0; // 占两行时，宽度使用 MaxWidth()
+        m_item_widths[first_index].rect.SetRect(current_x, 0, current_x + col_width, m_window_height);
+        m_item_widths[first_index].is_double_line = true;
+
+        current_x += col_width + item_space;
+    }
+
+    return current_x - x0;
 }
 
 void CTaskBarDlg::CalculateWindowSize()
 {
     bool horizontal_arrange = theApp.m_taskbar_data.horizontal_arrange && m_taskbar_on_top_or_bottom;
-    if (theApp.m_taskbar_data.display_item.IsEmpty() && theApp.m_taskbar_data.plugin_display_item.data().empty())
+    if (theApp.m_taskbar_data.display_item.IsEmpty() && theApp.m_taskbar_data.plugin_display_item.data().empty()
+        && !theApp.m_taskbar_data.groups.HasCustomGroupItems())
         theApp.m_taskbar_data.display_item.Add(TDI_UP);        //至少显示一项
 
     m_item_widths.clear();
@@ -762,7 +879,8 @@ void CTaskBarDlg::CalculateWindowSize()
         if (iter->IsPlugin())
         {
             auto plugin = iter->PluginItem();
-            if (plugin != nullptr && theApp.m_taskbar_data.plugin_display_item.Contains(plugin->GetItemId()))
+            if (plugin != nullptr && (theApp.m_taskbar_data.plugin_display_item.Contains(plugin->GetItemId())
+                                      || theApp.m_taskbar_data.groups.InCustomGroup(*iter)))
             {
                 //标签宽度
                 int& label_width{ item_widths[*iter].label_width };
@@ -791,21 +909,32 @@ void CTaskBarDlg::CalculateWindowSize()
         }
     }
 
+    //按分组依次添加项目。同一个项目可以属于多个分组，此时它在每个分组中各显示一次。
+    //分组内部的顺序与“显示项目”对话框中的顺序一致。
+    const auto& groups = theApp.m_taskbar_data.groups;
     auto item_order{ theApp.m_taskbar_data.item_order.GetAllDisplayItemsWithOrder() };
-    for (const auto& item : item_order)
+    for (int group_index = 0; group_index < groups.GroupCount(); group_index++)
     {
-        if (theApp.IsTaksbarItemDisplayed(item))
+        for (const auto& item : item_order)
         {
-            ItemWidthInfo width_info = item;
-            width_info.item_width = item_widths[item];
-            m_item_widths.push_back(width_info);
+            //默认分组显示在“显示项目”对话框中勾选的项目，其他分组显示各自选择的项目
+            bool in_group = (group_index == 0)
+                                ? theApp.IsTaksbarItemDisplayed(item)
+                                : (groups.Contains(group_index, item) && CTaskbarItemOrderHelper::IsItemDisplayed(item));
+            if (in_group)
+            {
+                ItemWidthInfo width_info = item;
+                width_info.item_width = item_widths[item];
+                width_info.group = group_index;
+                m_item_widths.push_back(width_info);
+            }
         }
     }
 
-    int item_count = static_cast<int>(m_item_widths.size());
-
     auto last_window_width{ m_window_width };
     auto last_window_height{ m_window_height };
+
+    m_group_layouts.clear();
 
     //计算窗口总宽度/高度和矩形区域
     if (IsTasksbarOnTopOrBottom())  //任务栏在桌面的顶部或底部时
@@ -815,105 +944,69 @@ void CTaskBarDlg::CalculateWindowSize()
         else
             m_window_height = TASKBAR_WND_HEIGHT * 2 / 3;
 
-        m_window_width = 0;
-        if (theApp.m_taskbar_data.horizontal_arrange)   //水平排列时
+        const int item_space = DPI(theApp.m_taskbar_data.item_space);
+        const int icon_size = max(DPI(8), m_window_height - DPI(4));
+
+        //按分组把m_item_widths分成若干段
+        struct GroupSegment
         {
-            CRect item_rect{};
-            int index = 0;
-            for (auto iter = m_item_widths.begin(); iter != m_item_widths.end(); ++iter)
-            {
-                m_window_width += iter->item_width.TotalWidth();
-                if (index > 0)
-                    item_rect.MoveToX(item_rect.right + DPI(theApp.m_taskbar_data.item_space));
-                item_rect.right = item_rect.left + iter->item_width.TotalWidth();
-                item_rect.bottom = item_rect.top + m_window_height;
-                m_item_rects[*iter] = item_rect;
-                index++;
-            }
-            m_window_width += DPI(theApp.m_taskbar_data.item_space) * item_count;   //加上每个标签间的空隙
-        }
-        else        //非水平排列时，每两个一组排列
+            int group{};
+            size_t first{};
+            size_t last{};
+            int icon_width{};   //图标占用的宽度（没有图标时为0）
+            int content_width{};    //项目占用的宽度
+        };
+        std::vector<GroupSegment> segments;
+        for (size_t i = 0; i < m_item_widths.size();)
         {
-            int current_x = DPI(theApp.m_taskbar_data.item_space); // 初始 X 坐标为左侧空隙
-            int item_space = DPI(theApp.m_taskbar_data.item_space);
-
-            //计算两个一组时上下区域的垂直位置
-            int item_height = m_window_height / 2;
-            int y_pos_up = -DPI(theApp.m_taskbar_data.vertical_margin) / 2;
-            int y_pos_down = y_pos_up + item_height + DPI(theApp.m_taskbar_data.vertical_margin);
-
-            int width0 = 0;
-            int max_width0 = 0;
-            bool has_first_item = false;
-            auto first_iter = m_item_widths.end(); // 用于保存当前列第一个项目的迭代器，以便后续修正其宽度
-
-            for (auto iter = m_item_widths.begin(); iter != m_item_widths.end(); ++iter)
-            {
-                if (iter->IsDoubleLineExclusive())
-                {
-                    // 如果前面有未配对的单行项目，它现在被迫单独成列，应该占两行
-                    if (has_first_item)
-                    {
-                        int col_width = max_width0; // 占两行时，宽度使用 MaxWidth()
-                        m_item_rects[*first_iter].SetRect(current_x, 0, current_x + col_width, m_window_height);
-                        first_iter->is_double_line = true;
-
-                        current_x += col_width + item_space;
-                        has_first_item = false;
-                    }
-
-                    // 处理当前的独占双行项目，单独成列，占两行
-                    int col_width = iter->item_width.MaxWidth();
-                    m_item_rects[*iter].SetRect(current_x, 0, current_x + col_width, m_window_height);
-                    iter->is_double_line = true;
-
-                    current_x += col_width + item_space;
-                }
-                else
-                {
-                    iter->is_double_line = false;
-                    if (!has_first_item)
-                    {
-                        // 当前列的第一个项目（上半部分），占一行
-                        width0 = iter->item_width.TotalWidth();
-                        max_width0 = iter->item_width.MaxWidth();
-
-                        first_iter = iter;
-                        // 暂时设置 rect，right 边界会在配对成功或循环结束时根据列最大宽度进行修正
-                        m_item_rects[*iter].SetRect(current_x, y_pos_up, current_x + width0, y_pos_up + item_height);
-
-                        has_first_item = true;
-                    }
-                    else
-                    {
-                        // 当前列的第二个项目（下半部分），占一行，与第一个项目组成一列
-                        int col_width = max(width0, iter->item_width.TotalWidth());
-
-                        // 修正第一个项目的右边界，确保同一列的两个项目宽度一致
-                        m_item_rects[*first_iter].right = current_x + col_width;
-
-                        // 设置第二个项目的矩形区域
-                        m_item_rects[*iter].SetRect(current_x, y_pos_down, current_x + col_width, y_pos_down + item_height);
-
-                        current_x += col_width + item_space;
-                        has_first_item = false;
-                    }
-                }
-            }
-
-            // 循环结束后，如果还有未配对的单行项目（例如项目总数为奇数，且最后一个不是独占双行），它单独成列，应该占两行
-            if (has_first_item)
-            {
-                int col_width = max_width0; // 占两行时，宽度使用 MaxWidth()
-                m_item_rects[*first_iter].SetRect(current_x, 0, current_x + col_width, m_window_height);
-                first_iter->is_double_line = true;
-
-                current_x += col_width + item_space;
-            }
-
-            // 保存总宽度
-            m_window_width = current_x;
+            size_t j = i;
+            while (j < m_item_widths.size() && m_item_widths[j].group == m_item_widths[i].group)
+                j++;
+            GroupSegment seg;
+            seg.group = m_item_widths[i].group;
+            seg.first = i;
+            seg.last = j;
+            const std::wstring& icon_path = theApp.m_taskbar_data.groups.GetGroup(seg.group).icon_path;
+            if (!icon_path.empty() && TaskbarGroupIcons::Get(icon_path, icon_size) != NULL)
+                seg.icon_width = icon_size + item_space;
+            //先在原点处排列一次以得到分组需要的宽度
+            seg.content_width = LayoutGroupItems(seg.first, seg.last, 0);
+            segments.push_back(seg);
+            i = j;
         }
+
+        //每个有项目的分组平分窗口宽度。窗口宽度在设置中指定（0表示自动：由最宽的分组决定）
+        int slot_width = 0;
+        if (theApp.m_taskbar_data.groups.window_width > 0 && !segments.empty())
+        {
+            slot_width = DPI(theApp.m_taskbar_data.groups.window_width) / static_cast<int>(segments.size());
+        }
+        else
+        {
+            for (const auto& seg : segments)
+                slot_width = max(slot_width, seg.icon_width + seg.content_width);
+        }
+
+        int slot_x = 0;
+        for (const auto& seg : segments)
+        {
+            LayoutGroupItems(seg.first, seg.last, slot_x + seg.icon_width);
+
+            GroupLayout group_layout;
+            group_layout.group_index = seg.group;
+            group_layout.slot_rect = CRect(slot_x, 0, slot_x + slot_width, m_window_height);
+            if (seg.icon_width > 0)
+            {
+                int icon_top = (m_window_height - icon_size) / 2;
+                group_layout.icon_rect = CRect(slot_x, icon_top, slot_x + icon_size, icon_top + icon_size);
+            }
+            m_group_layouts.push_back(group_layout);
+
+            slot_x += slot_width;
+        }
+        m_window_width = slot_x;
+        if (theApp.m_taskbar_data.groups.window_width > 0 && !segments.empty())
+            m_window_width = DPI(theApp.m_taskbar_data.groups.window_width);
     }
     else        //任务栏在桌面两侧时
     {
@@ -936,12 +1029,17 @@ void CTaskBarDlg::CalculateWindowSize()
             int item_width = min(m_window_width, m_rcTaskbar.Width() - DPI(2));
             item_rect.left = 0;
             item_rect.right = item_rect.left + item_width;
-            m_item_rects[*iter] = item_rect;
+            iter->rect = item_rect;
 
             m_window_height += item_height;
             m_window_height += DPI(theApp.m_taskbar_data.item_space);
         }
     }
+
+    //每个项目的矩形区域（同一个项目出现多次时，保存最后一个，用于鼠标点击判断）
+    m_item_rects.clear();
+    for (const auto& item_info : m_item_widths)
+        m_item_rects[item_info] = item_info.rect;
 
     // 如果窗口尺寸发生变化，则重新调整任务栏窗口位置
     if (last_window_width != m_window_width || last_window_height != m_window_height) {

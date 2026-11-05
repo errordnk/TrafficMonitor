@@ -2,6 +2,7 @@
 #pragma once
 #include "stdafx.h"
 #include "TaskbarItemOrderHelper.h"
+#include "TaskbarGroups.h"
 
 struct Date
 {
@@ -308,6 +309,7 @@ struct TaskBarSettingData : public PublicSettingData
     CTaskbarItemOrderHelper item_order;
     DisplayItemSet display_item{ TDI_UP, TDI_DOWN };      //任务栏窗口显示的项目
     StringSet plugin_display_item;                  //任务窗口显示的插件项目
+    CTaskbarGroupSet groups;                        //任务栏窗口的分组（至少有一个默认分组）
 
     bool show_taskbar_wnd_in_secondary_display{ false };    //是否在副显示器上显示任务栏窗口
     int secondary_display_index{};      //在第几个副显示器上显示任务栏窗口

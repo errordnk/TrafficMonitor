@@ -2959,8 +2959,10 @@ void CTrafficMonitorDlg::OnDisplaySettings()
     dlg.SetItemOrder(theApp.m_taskbar_data.item_order.GetItemOrderConst());
     dlg.SetDisplayItem(theApp.m_taskbar_data.display_item);
     dlg.SetPluginDisplayItem(theApp.m_taskbar_data.plugin_display_item);
+    dlg.SetGroups(theApp.m_taskbar_data.groups);
     if (dlg.DoModal() == IDOK)
     {
+        theApp.m_taskbar_data.groups = dlg.GetGroups();
         theApp.m_taskbar_data.item_order.SetOrder(dlg.GetItemOrder());
         theApp.m_taskbar_data.display_item = dlg.GetDisplayItem();
         theApp.m_taskbar_data.plugin_display_item = dlg.GetPluginDisplayItem();
