@@ -393,9 +393,9 @@ void CTaskBarDlg::DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect r
     }
     if (item->IsCustomDraw())
     {
-        //根据背景色的亮度判断深色还是浅色模式
-        const COLORREF& bk{ theApp.m_taskbar_data.back_color };
-        int background_brightness{ (GetRValue(bk) + GetGValue(bk) + GetBValue(bk)) / 3 };
+        //判断深色还是浅色模式。背景色可能只是透明窗口的“透明色”（例如黑色），不能代表任务栏的真实颜色，
+        //所以根据文字颜色判断：文字颜色是与任务栏形成对比的颜色，文字为浅色则任务栏为深色。
+        int background_brightness{ 255 - (GetRValue(value_text_color) + GetGValue(value_text_color) + GetBValue(value_text_color)) / 3 };
         //由插件自绘
         if (plugin != nullptr && plugin->GetAPIVersion() >= 2)
         {
