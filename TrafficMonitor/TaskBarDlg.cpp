@@ -189,7 +189,7 @@ void CTaskBarDlg::ShowInfo(CDC* pDC)
         const auto& groups = theApp.m_taskbar_data.groups;
         if (group_layout.icon_rect.IsRectEmpty() || group_layout.group_index >= groups.GroupCount())
             continue;
-        HICON group_icon = TaskbarGroupIcons::Get(groups.GetGroup(group_layout.group_index).icon_path, group_layout.icon_rect.Width());
+        HICON group_icon = TaskbarGroupIcons::Get(groups.GetGroup(group_layout.group_index).icon_path, group_layout.icon_rect.Width(), GroupIconColor());
         if (group_icon != NULL)
             draw.DrawIcon(group_icon, group_layout.icon_rect.TopLeft(), group_layout.icon_rect.Size());
     }
@@ -755,6 +755,14 @@ void CTaskBarDlg::ApplySettings()
     CalculateWindowSize();
 }
 
+//分组图标使用任务栏窗口的文字颜色绘制（SVG中的currentColor）
+COLORREF CTaskBarDlg::GroupIconColor() const
+{
+    if (!theApp.m_taskbar_data.text_colors.empty())
+        return theApp.m_taskbar_data.text_colors.begin()->second.value;
+    return RGB(255, 255, 255);
+}
+
 int CTaskBarDlg::LayoutGroupItems(size_t first, size_t last, int x0)
 {
     if (first >= last)
@@ -967,7 +975,7 @@ void CTaskBarDlg::CalculateWindowSize()
             seg.first = i;
             seg.last = j;
             const std::wstring& icon_path = theApp.m_taskbar_data.groups.GetGroup(seg.group).icon_path;
-            if (!icon_path.empty() && TaskbarGroupIcons::Get(icon_path, icon_size) != NULL)
+            if (!icon_path.empty() && TaskbarGroupIcons::Get(icon_path, icon_size, GroupIconColor()) != NULL)
                 seg.icon_width = icon_size + item_space;
             //先在原点处排列一次以得到分组需要的宽度
             seg.content_width = LayoutGroupItems(seg.first, seg.last, 0);

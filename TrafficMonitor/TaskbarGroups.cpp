@@ -146,11 +146,11 @@ bool CTaskbarGroupSet::operator==(const CTaskbarGroupSet& another) const
 
 namespace
 {
-    std::map<std::pair<std::wstring, int>, HICON> g_icon_cache;
+    std::map<std::tuple<std::wstring, int, COLORREF>, HICON> g_icon_cache;
 
     //Rasterizes an SVG file with Direct2D (ID2D1DeviceContext5, Windows 10 1703+) into a size x size HICON.
     //Returns NULL if the file is not a valid SVG or the system has no SVG support.
-    HICON LoadSvgIcon(const std::wstring& path, int size)
+    HICON LoadSvgIcon(const std::wstring& path, int size, COLORREF tint)
     {
         using Microsoft::WRL::ComPtr;
         if (size <= 0)
@@ -188,6 +188,16 @@ namespace
         ComPtr<ID2D1SvgDocument> svg;
         if (FAILED(context5->CreateSvgDocument(stream.Get(), D2D1::SizeF(static_cast<float>(size), static_cast<float>(size)), &svg)))
             return NULL;
+
+        //color of "currentColor" is taken from the color attribute of the root element
+        ComPtr<ID2D1SvgElement> svg_root;
+        svg->GetRoot(&svg_root);
+        if (svg_root)
+        {
+            wchar_t color_text[16]{};
+            swprintf_s(color_text, L"#%02x%02x%02x", GetRValue(tint), GetGValue(tint), GetBValue(tint));
+            svg_root->SetAttributeValue(L"color", D2D1_SVG_ATTRIBUTE_STRING_TYPE_SVG, color_text);
+        }
 
         ComPtr<ID2D1Bitmap1> target;
         D2D1_BITMAP_PROPERTIES1 target_props = D2D1::BitmapProperties1(
@@ -267,15 +277,15 @@ namespace
 
 namespace TaskbarGroupIcons
 {
-    HICON Get(const std::wstring& path, int size)
+    HICON Get(const std::wstring& path, int size, COLORREF color)
     {
         if (path.empty() || size <= 0)
             return NULL;
-        auto key = std::make_pair(path, size);
+        auto key = std::make_tuple(path, size, color);
         auto iter = g_icon_cache.find(key);
         if (iter != g_icon_cache.end())
             return iter->second;
-        HICON icon = LoadSvgIcon(path, size);
+        HICON icon = LoadSvgIcon(path, size, color);
         g_icon_cache[key] = icon;       //a failed load (NULL) is cached too until Clear() is called
         return icon;
     }

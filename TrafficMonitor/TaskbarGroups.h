@@ -61,8 +61,9 @@ private:
 //Rasterizes group icons (SVG files only, through Direct2D) to HICON of the requested size.
 namespace TaskbarGroupIcons
 {
+    //"currentColor" in the SVG is drawn with the given color (the text color of the taskbar window).
     //Returns NULL if the file cannot be loaded. The icon is owned by the cache.
-    HICON Get(const std::wstring& path, int size);
+    HICON Get(const std::wstring& path, int size, COLORREF color);
     //Destroys all cached icons
     void Clear();
 }
