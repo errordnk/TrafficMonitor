@@ -11,6 +11,10 @@ public:
     //根据设定的顺序获取任务窗口每个显示项目
     std::vector<CommonDisplayItem> GetAllDisplayItemsWithOrder() const;
 
+    //Moves the item at display_index (an index in GetAllDisplayItemsWithOrder) up (delta = -1) or down (delta = 1).
+    //Returns the new display index, or -1 if the item cannot be moved.
+    int MoveDisplayedItem(int display_index, int delta);
+
     void FromString(const std::wstring& str);
     std::wstring ToString() const;
     void SetOrder(const vector<int>& item_order);

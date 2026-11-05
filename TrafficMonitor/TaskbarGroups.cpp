@@ -19,7 +19,10 @@ static const wchar_t* const DEFAULT_GROUP_NAME = L"Default";
 
 CTaskbarGroupSet::CTaskbarGroupSet()
 {
-    m_groups.push_back(TaskbarGroup{ DEFAULT_GROUP_NAME, L"", {} });
+    TaskbarGroup default_group;
+    default_group.name = DEFAULT_GROUP_NAME;
+    default_group.is_default = true;
+    m_groups.push_back(default_group);
 }
 
 std::wstring CTaskbarGroupSet::ItemKey(const CommonDisplayItem& item)
@@ -33,14 +36,14 @@ std::wstring CTaskbarGroupSet::ItemKey(const CommonDisplayItem& item)
 
 bool CTaskbarGroupSet::Contains(int group_index, const CommonDisplayItem& item) const
 {
-    if (group_index <= 0 || group_index >= GroupCount())
+    if (group_index < 0 || group_index >= GroupCount() || m_groups[group_index].is_default)
         return false;
     return m_groups[group_index].items.count(ItemKey(item)) > 0;
 }
 
 void CTaskbarGroupSet::SetMember(int group_index, const CommonDisplayItem& item, bool member)
 {
-    if (group_index <= 0 || group_index >= GroupCount())
+    if (group_index < 0 || group_index >= GroupCount() || m_groups[group_index].is_default)
         return;
     if (member)
         m_groups[group_index].items.insert(ItemKey(item));
@@ -50,9 +53,9 @@ void CTaskbarGroupSet::SetMember(int group_index, const CommonDisplayItem& item,
 
 bool CTaskbarGroupSet::HasCustomGroupItems() const
 {
-    for (size_t i = 1; i < m_groups.size(); i++)
+    for (const auto& group : m_groups)
     {
-        if (!m_groups[i].items.empty())
+        if (!group.is_default && !group.items.empty())
             return true;
     }
     return false;
@@ -60,7 +63,7 @@ bool CTaskbarGroupSet::HasCustomGroupItems() const
 
 bool CTaskbarGroupSet::InCustomGroup(const CommonDisplayItem& item) const
 {
-    for (int i = 1; i < GroupCount(); i++)
+    for (int i = 0; i < GroupCount(); i++)
     {
         if (Contains(i, item))
             return true;
@@ -70,16 +73,27 @@ bool CTaskbarGroupSet::InCustomGroup(const CommonDisplayItem& item) const
 
 int CTaskbarGroupSet::AddGroup(const std::wstring& name)
 {
-    m_groups.push_back(TaskbarGroup{ name, L"", {} });
+    TaskbarGroup group;
+    group.name = name;
+    m_groups.push_back(group);
     return GroupCount() - 1;
 }
 
 bool CTaskbarGroupSet::RemoveGroup(int index)
 {
-    if (index <= 0 || index >= GroupCount())
+    if (index < 0 || index >= GroupCount() || m_groups[index].is_default)
         return false;
     m_groups.erase(m_groups.begin() + index);
     return true;
+}
+
+int CTaskbarGroupSet::MoveGroup(int index, int delta)
+{
+    int target = index + delta;
+    if (index < 0 || index >= GroupCount() || target < 0 || target >= GroupCount())
+        return -1;
+    std::swap(m_groups[index], m_groups[target]);
+    return target;
 }
 
 void CTaskbarGroupSet::LoadFromIni(const CIniHelper& ini)
@@ -99,7 +113,10 @@ void CTaskbarGroupSet::LoadFromIni(const CIniHelper& ini)
         if (group.name.empty())
             group.name = (i == 0) ? DEFAULT_GROUP_NAME : (L"Group " + std::to_wstring(i + 1));
         group.icon_path = ini.GetString(INI_SECTION, (prefix + L"icon").c_str(), L"");
-        if (i > 0)
+        group.text = ini.GetString(INI_SECTION, (prefix + L"text").c_str(), L"");
+        //old settings have no default flag: the first group is the default group
+        group.is_default = ini.GetBool(INI_SECTION, (prefix + L"default").c_str(), i == 0);
+        if (!group.is_default)
         {
             std::vector<std::wstring> keys;
             CCommon::StringSplit(ini.GetString(INI_SECTION, (prefix + L"items").c_str(), L""), L',', keys);
@@ -111,6 +128,17 @@ void CTaskbarGroupSet::LoadFromIni(const CIniHelper& ini)
         }
         m_groups.push_back(group);
     }
+    //exactly one default group
+    int default_index = -1;
+    for (int i = 0; i < GroupCount(); i++)
+    {
+        if (m_groups[i].is_default && default_index < 0)
+            default_index = i;
+        else
+            m_groups[i].is_default = false;
+    }
+    if (default_index < 0)
+        m_groups[0].is_default = true;
 }
 
 void CTaskbarGroupSet::SaveToIni(CIniHelper& ini) const
@@ -122,7 +150,9 @@ void CTaskbarGroupSet::SaveToIni(CIniHelper& ini) const
         std::wstring prefix = L"group_" + std::to_wstring(i) + L"_";
         ini.WriteString(INI_SECTION, (prefix + L"name").c_str(), m_groups[i].name);
         ini.WriteString(INI_SECTION, (prefix + L"icon").c_str(), m_groups[i].icon_path);
-        if (i > 0)
+        ini.WriteString(INI_SECTION, (prefix + L"text").c_str(), m_groups[i].text);
+        ini.WriteBool(INI_SECTION, (prefix + L"default").c_str(), m_groups[i].is_default);
+        if (!m_groups[i].is_default)
         {
             std::wstring items;
             for (const auto& key : m_groups[i].items)

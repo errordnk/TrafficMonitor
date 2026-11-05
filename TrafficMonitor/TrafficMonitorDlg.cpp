@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include "Test.h"
 #include "PluginManagerDlg.h"
-#include "SetItemOrderDlg.h"
+#include "TaskbarGroupsDlg.h"
 #include "WindowsSettingHelper.h"
 #include "PluginInfoDlg.h"
 #include "WIC.h"
@@ -2955,17 +2955,9 @@ afx_msg LRESULT CTrafficMonitorDlg::OnSettingsApplied(WPARAM wParam, LPARAM lPar
 void CTrafficMonitorDlg::OnDisplaySettings()
 {
     // TODO: 在此添加命令处理程序代码
-    CSetItemOrderDlg dlg;
-    dlg.SetItemOrder(theApp.m_taskbar_data.item_order.GetItemOrderConst());
-    dlg.SetDisplayItem(theApp.m_taskbar_data.display_item);
-    dlg.SetPluginDisplayItem(theApp.m_taskbar_data.plugin_display_item);
-    dlg.SetGroups(theApp.m_taskbar_data.groups);
-    if (dlg.DoModal() == IDOK)
+    //显示项目、显示顺序和分组统一在“分组”对话框中设置
+    if (CTaskbarGroupsDlg::Edit(theApp.m_taskbar_data, this))
     {
-        theApp.m_taskbar_data.groups = dlg.GetGroups();
-        theApp.m_taskbar_data.item_order.SetOrder(dlg.GetItemOrder());
-        theApp.m_taskbar_data.display_item = dlg.GetDisplayItem();
-        theApp.m_taskbar_data.plugin_display_item = dlg.GetPluginDisplayItem();
         //CloseTaskBarWnd();
         //OpenTaskBarWnd();
         if (IsTaskbarWndValid())

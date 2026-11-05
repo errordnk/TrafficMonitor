@@ -37,6 +37,27 @@ std::vector<CommonDisplayItem> CTaskbarItemOrderHelper::GetAllDisplayItemsWithOr
     return items;
 }
 
+int CTaskbarItemOrderHelper::MoveDisplayedItem(int display_index, int delta)
+{
+    //positions in m_item_order of the items that GetAllDisplayItemsWithOrder returns
+    std::vector<size_t> positions;
+    for (size_t pos = 0; pos < m_item_order.size(); pos++)
+    {
+        int i = m_item_order[pos];
+        if (i < 0 || i >= static_cast<int>(m_all_item_in_default_order.size()))
+            continue;
+        if (m_displayed_only && !IsItemDisplayed(m_all_item_in_default_order[i]))
+            continue;
+        positions.push_back(pos);
+    }
+    int target = display_index + delta;
+    if (display_index < 0 || display_index >= static_cast<int>(positions.size())
+        || target < 0 || target >= static_cast<int>(positions.size()))
+        return -1;
+    std::swap(m_item_order[positions[display_index]], m_item_order[positions[target]]);
+    return target;
+}
+
 void CTaskbarItemOrderHelper::FromString(const std::wstring& str)
 {
     m_item_order.clear();

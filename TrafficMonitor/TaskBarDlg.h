@@ -129,7 +129,6 @@ protected:
         bool is_double_line{};  //项目是否占两行
         int group{};            //项目所属分组的序号
         CRect rect;             //项目在任务栏窗口中的矩形区域
-        bool left_align_value{};    //数值强制左对齐（分组图标右侧的第一个项目，使图标紧贴文字）
 
         ItemWidthInfo()
         {}
@@ -148,13 +147,17 @@ protected:
         int group_index{};      //分组序号
         CRect slot_rect;        //分组占用的区域
         CRect icon_rect;        //分组图标的区域（为空表示没有图标）
+        CRect text_rect;        //分组文字的区域（设置了文字时显示文字，代替图标）
     };
     std::vector<GroupLayout> m_group_layouts;
+    bool m_tight_layout{ false };       //使用了分组：项目按固定宽度紧凑排列，数值右对齐
 
     //在上下排列的任务栏中，从x0开始排列m_item_widths[first, last)中的项目，返回占用的宽度
     //item_space: 项目之间的间距
     int LayoutGroupItems(size_t first, size_t last, int x0, int item_space);
     COLORREF GroupIconColor() const;    //分组图标的颜色
+    //数值占用的固定宽度：所有数字按“8”计算，并且第一个数字至少按两位计算，使“9”和“10”占用相同的宽度，避免位数变化时布局抖动
+    int StableTextWidth(const CString& text);
     CommonDisplayItem m_clicked_item;           //鼠标点击的任务栏项目
 
     std::map<CommonDisplayItem, std::list<int>> m_map_history_data;  //保存各项数据历史数据的链表，链表保存按照时间顺序，越靠近头部数据越新
@@ -191,8 +194,8 @@ protected:
     //  rect: 绘制矩形区域
     //  label_width: 标签区域的宽度
     //  vertical: 如果为true，则标签和数值上下显示
-    //  left_align_value: 如果为true，则数值强制左对齐
-    void DrawDisplayItem(IDrawCommon& drawer, DisplayItem type, CRect rect, int label_width, bool vertical = false, bool left_align_value = false);
+    //  right_align_value: 如果为true，则数值强制右对齐（使用分组时，项目内的数值按右侧对齐）
+    void DrawDisplayItem(IDrawCommon& drawer, DisplayItem type, CRect rect, int label_width, bool vertical = false, bool right_align_value = false);
 
     //绘制任务栏窗口中的一个插件项目
    //  drawer: 绘图类的对象
@@ -200,7 +203,7 @@ protected:
    //  rect: 绘制矩形区域
    //  label_width: 标签区域的宽度
    //  vertical: 如果为true，则标签和数值上下显示
-    void DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect rect, int label_width, bool vertical = false, bool left_align_value = false);
+    void DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect rect, int label_width, bool vertical = false, bool right_align_value = false);
 
     void MoveWindow(CRect rect);
 

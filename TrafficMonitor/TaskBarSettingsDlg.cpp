@@ -8,7 +8,7 @@
 #include "CMFCColorDialogEx.h"
 #include "CAutoAdaptSettingsDlg.h"
 #include "DisplayTextSettingDlg.h"
-#include "SetItemOrderDlg.h"
+#include "TaskbarGroupsDlg.h"
 #include "WindowsSettingHelper.h"
 #include "TrafficMonitorDlg.h"
 #include "FileDialogEx.h"
@@ -254,7 +254,6 @@ BEGIN_MESSAGE_MAP(CTaskBarSettingsDlg, CTabDlg)
     ON_BN_CLICKED(IDC_AUTO_ADAPT_SETTINGS_BUTTON, &CTaskBarSettingsDlg::OnBnClickedAutoAdaptSettingsButton)
     ON_BN_CLICKED(IDC_AUTO_ADAPT_LIGHT_THEME_CHECK, &CTaskBarSettingsDlg::OnBnClickedAutoAdaptLightThemeCheck)
     ON_BN_CLICKED(IDC_AUTO_SET_BACK_COLOR_CHECK, &CTaskBarSettingsDlg::OnBnClickedAutoSetBackColorCheck)
-    ON_BN_CLICKED(IDC_DISPLAY_TEXT_SETTING_BUTTON, &CTaskBarSettingsDlg::OnBnClickedDisplayTextSettingButton)
     ON_CBN_SELCHANGE(IDC_MEMORY_DISPLAY_COMBO, &CTaskBarSettingsDlg::OnCbnSelchangeMemoryDisplayCombo)
     ON_BN_CLICKED(IDC_SHOW_DASHED_BOX, &CTaskBarSettingsDlg::OnBnClickedShowDashedBox)
     ON_BN_CLICKED(IDC_SET_ORDER_BUTTON, &CTaskBarSettingsDlg::OnBnClickedSetOrderButton)
@@ -825,14 +824,6 @@ void CTaskBarSettingsDlg::OnBnClickedAutoSetBackColorCheck()
 }
 
 
-void CTaskBarSettingsDlg::OnBnClickedDisplayTextSettingButton()
-{
-    // TODO: 在此添加控件通知处理程序代码
-    CDisplayTextSettingDlg dlg(m_data.disp_str);
-    dlg.DoModal();
-}
-
-
 void CTaskBarSettingsDlg::OnCbnSelchangeMemoryDisplayCombo()
 {
     // TODO: 在此添加控件通知处理程序代码
@@ -850,18 +841,8 @@ void CTaskBarSettingsDlg::OnBnClickedShowDashedBox()
 void CTaskBarSettingsDlg::OnBnClickedSetOrderButton()
 {
     // TODO: 在此添加控件通知处理程序代码
-    CSetItemOrderDlg dlg;
-    dlg.SetItemOrder(m_data.item_order.GetItemOrderConst());
-    dlg.SetDisplayItem(m_data.display_item);
-    dlg.SetPluginDisplayItem(m_data.plugin_display_item);
-    dlg.SetGroups(m_data.groups);
-    if (dlg.DoModal() == IDOK)
-    {
-        m_data.groups = dlg.GetGroups();
-        m_data.item_order.SetOrder(dlg.GetItemOrder());
-        m_data.display_item = dlg.GetDisplayItem();
-        m_data.plugin_display_item = dlg.GetPluginDisplayItem();
-    }
+    //显示项目、显示顺序和分组统一在“分组”对话框中设置
+    CTaskbarGroupsDlg::Edit(m_data, this);
 }
 
 

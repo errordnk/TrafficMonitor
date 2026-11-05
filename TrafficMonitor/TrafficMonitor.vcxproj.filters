@@ -442,9 +442,6 @@
     <ClInclude Include="TaskbarItemOrderHelper.h">
       <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>
     </ClInclude>
-    <ClInclude Include="SetItemOrderDlg.h">
-      <Filter>源文件和头文件\对话框类\选项设置对话框\SetItemOrderDlg</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\PluginInterface.h">
       <Filter>源文件和头文件\头文件</Filter>
     </ClInclude>
@@ -743,9 +740,6 @@
     </ClCompile>
     <ClCompile Include="TaskbarItemOrderHelper.cpp">
       <Filter>源文件和头文件\公共的类\TaskbarItemOrderHelper</Filter>
-    </ClCompile>
-    <ClCompile Include="SetItemOrderDlg.cpp">
-      <Filter>源文件和头文件\对话框类\选项设置对话框\SetItemOrderDlg</Filter>
     </ClCompile>
     <ClCompile Include="PluginManager.cpp">
       <Filter>源文件和头文件\公共的类\PluginManager</Filter>

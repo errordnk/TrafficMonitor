@@ -474,6 +474,11 @@
 #define IDC_GROUP_ICON_BROWSE_BUTTON    1236
 #define IDC_GROUP_ITEMS_LIST            1237
 #define IDC_GROUP_WIDTH_EDIT            1238
+#define IDC_GROUP_UP_BUTTON             1239
+#define IDC_GROUP_DOWN_BUTTON           1240
+#define IDC_GROUP_TEXT_EDIT             1241
+#define IDC_GROUP_ITEM_UP_BUTTON        1242
+#define IDC_GROUP_ITEM_DOWN_BUTTON      1243
 
 // Next default values for new objects
 // 
@@ -481,7 +486,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        350
 #define _APS_NEXT_COMMAND_VALUE         33666
-#define _APS_NEXT_CONTROL_VALUE         1239
+#define _APS_NEXT_CONTROL_VALUE         1244
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -105,7 +105,6 @@ public:
     afx_msg void OnBnClickedAutoAdaptSettingsButton();
     afx_msg void OnBnClickedAutoAdaptLightThemeCheck();
     afx_msg void OnBnClickedAutoSetBackColorCheck();
-    afx_msg void OnBnClickedDisplayTextSettingButton();
     afx_msg void OnCbnSelchangeMemoryDisplayCombo();
     afx_msg void OnBnClickedShowDashedBox();
     afx_msg void OnBnClickedSetOrderButton();
