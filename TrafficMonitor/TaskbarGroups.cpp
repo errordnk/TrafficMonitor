@@ -197,6 +197,11 @@ namespace
             wchar_t color_text[16]{};
             swprintf_s(color_text, L"#%02x%02x%02x", GetRValue(tint), GetGValue(tint), GetBValue(tint));
             svg_root->SetAttributeValue(L"color", D2D1_SVG_ATTRIBUTE_STRING_TYPE_SVG, color_text);
+            //scale the drawing (viewBox) to the requested icon size
+            wchar_t size_text[16]{};
+            swprintf_s(size_text, L"%d", size);
+            svg_root->SetAttributeValue(L"width", D2D1_SVG_ATTRIBUTE_STRING_TYPE_SVG, size_text);
+            svg_root->SetAttributeValue(L"height", D2D1_SVG_ATTRIBUTE_STRING_TYPE_SVG, size_text);
         }
 
         ComPtr<ID2D1Bitmap1> target;

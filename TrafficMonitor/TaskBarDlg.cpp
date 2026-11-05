@@ -87,6 +87,26 @@ void CTaskBarDlg::ShowInfo(CDC* pDC)
             }
         }
     }
+    //使用分组时项目按实际文字宽度排列：如果某个项目的文字变宽，超出了已计算的宽度，立即重新计算布局，避免文字被截断
+    if (theApp.m_taskbar_data.groups.GroupCount() > 1 && m_pDC != nullptr)
+    {
+        bool need_relayout = false;
+        for (const auto& info : m_item_widths)
+        {
+            int text_width = 0;
+            if (!info.IsPlugin())
+                text_width = m_pDC->GetTextExtent(info.GetItemValueText(false)).cx;
+            else if (info.PluginItem() != nullptr && !info.PluginItem()->IsCustomDraw())
+                text_width = m_pDC->GetTextExtent(CString(info.PluginItem()->GetItemValueText())).cx;
+            if (text_width > info.item_width.value_width)
+            {
+                need_relayout = true;
+                break;
+            }
+        }
+        if (need_relayout)
+            CalculateWindowSize();
+    }
     auto render_type = m_supported_render_enums.GetAutoFitEnum();
     CRect draw_rect{m_rect}; // 绘图的矩形区域
     draw_rect.MoveToXY(0, 0);
@@ -200,9 +220,9 @@ void CTaskBarDlg::ShowInfo(CDC* pDC)
         if (!item_rect.IsRectEmpty())
         {
             if (iter->IsPlugin())
-                DrawPluginItem(draw, iter->PluginItem(), item_rect, iter->item_width.label_width, iter->is_double_line);
+                DrawPluginItem(draw, iter->PluginItem(), item_rect, iter->item_width.label_width, iter->is_double_line, iter->left_align_value);
             else
-                DrawDisplayItem(draw, iter->ItemType(), item_rect, iter->item_width.label_width, iter->is_double_line);
+                DrawDisplayItem(draw, iter->ItemType(), item_rect, iter->item_width.label_width, iter->is_double_line, iter->left_align_value);
         }
     }
 
@@ -214,7 +234,7 @@ void CTaskBarDlg::ShowInfo(CDC* pDC)
 #endif
 }
 
-void CTaskBarDlg::DrawDisplayItem(IDrawCommon& drawer, DisplayItem type, CRect rect, int label_width, bool vertical)
+void CTaskBarDlg::DrawDisplayItem(IDrawCommon& drawer, DisplayItem type, CRect rect, int label_width, bool vertical, bool left_align_value)
 {
     //设置要绘制的文本颜色
     COLORREF label_color{};
@@ -315,14 +335,14 @@ void CTaskBarDlg::DrawDisplayItem(IDrawCommon& drawer, DisplayItem type, CRect r
     }
 
     //绘制数值
-    IDrawCommon::Alignment value_alignment{ theApp.m_taskbar_data.value_right_align ? IDrawCommon::Alignment::RIGHT : IDrawCommon::Alignment::LEFT };      //数值的对齐方式
+    IDrawCommon::Alignment value_alignment{ (theApp.m_taskbar_data.value_right_align && !left_align_value) ? IDrawCommon::Alignment::RIGHT : IDrawCommon::Alignment::LEFT };      //数值的对齐方式
     if (vertical)
         value_alignment = IDrawCommon::Alignment::CENTER;
     CString str_value = CommonDisplayItem(type).GetItemValueText(false);
     drawer.DrawWindowText(rect_value, str_value, text_color, value_alignment);
 }
 
-void CTaskBarDlg::DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect rect, int label_width, bool vertical)
+void CTaskBarDlg::DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect rect, int label_width, bool vertical, bool left_align_value)
 {
     if (item == nullptr)
         return;
@@ -422,7 +442,7 @@ void CTaskBarDlg::DrawPluginItem(IDrawCommon& drawer, IPluginItem* item, CRect r
         CString lable_text = theApp.m_taskbar_data.disp_str.GetConst(item).c_str();
         drawer.DrawWindowText(rect_label, lable_text, label_text_color, (vertical ? IDrawCommon::Alignment::CENTER : IDrawCommon::Alignment::LEFT));
         //画数值
-        IDrawCommon::Alignment value_alignment{ theApp.m_taskbar_data.value_right_align ? IDrawCommon::Alignment::RIGHT : IDrawCommon::Alignment::LEFT };      //数值的对齐方式
+        IDrawCommon::Alignment value_alignment{ (theApp.m_taskbar_data.value_right_align && !left_align_value) ? IDrawCommon::Alignment::RIGHT : IDrawCommon::Alignment::LEFT };      //数值的对齐方式
         if (vertical)
             value_alignment = IDrawCommon::Alignment::CENTER;
         drawer.DrawWindowText(rect_value, item->GetItemValueText(), value_text_color, value_alignment);
@@ -763,12 +783,11 @@ COLORREF CTaskBarDlg::GroupIconColor() const
     return RGB(255, 255, 255);
 }
 
-int CTaskBarDlg::LayoutGroupItems(size_t first, size_t last, int x0)
+int CTaskBarDlg::LayoutGroupItems(size_t first, size_t last, int x0, int item_space)
 {
     if (first >= last)
         return 0;
 
-    const int item_space = DPI(theApp.m_taskbar_data.item_space);
     if (theApp.m_taskbar_data.horizontal_arrange)   //水平排列时
     {
         CRect item_rect(x0, 0, x0, 0);
@@ -920,6 +939,8 @@ void CTaskBarDlg::CalculateWindowSize()
     //按分组依次添加项目。同一个项目可以属于多个分组，此时它在每个分组中各显示一次。
     //分组内部的顺序与“显示项目”对话框中的顺序一致。
     const auto& groups = theApp.m_taskbar_data.groups;
+    //使用了分组时，项目按实际文字宽度紧凑排列（每秒重新计算），项目之间的间距不超过一个空格
+    const bool tight_layout = groups.GroupCount() > 1;
     auto item_order{ theApp.m_taskbar_data.item_order.GetAllDisplayItemsWithOrder() };
     for (int group_index = 0; group_index < groups.GroupCount(); group_index++)
     {
@@ -934,6 +955,13 @@ void CTaskBarDlg::CalculateWindowSize()
                 ItemWidthInfo width_info = item;
                 width_info.item_width = item_widths[item];
                 width_info.group = group_index;
+                if (tight_layout)
+                {
+                    if (!item.IsPlugin())
+                        width_info.item_width.value_width = m_pDC->GetTextExtent(item.GetItemValueText(false)).cx;
+                    else if (item.PluginItem() != nullptr && !item.PluginItem()->IsCustomDraw())
+                        width_info.item_width.value_width = m_pDC->GetTextExtent(CString(item.PluginItem()->GetItemValueText())).cx;
+                }
                 m_item_widths.push_back(width_info);
             }
         }
@@ -952,8 +980,13 @@ void CTaskBarDlg::CalculateWindowSize()
         else
             m_window_height = TASKBAR_WND_HEIGHT * 2 / 3;
 
+        //图标紧贴文字：与文字之间的距离不超过一个空格的宽度；图标高度与文字高度一致
+        const bool row_mode = theApp.m_taskbar_data.horizontal_arrange;
+        const int icon_gap = max(1, m_pDC->GetTextExtent(L" ").cx);
         const int item_space = DPI(theApp.m_taskbar_data.item_space);
-        const int icon_size = max(DPI(8), m_window_height - DPI(4));
+        const int item_gap = tight_layout ? min(item_space, icon_gap) : item_space;     //分组内项目之间的间距
+        int icon_size = max(DPI(8), m_window_height - DPI(4));
+        icon_size = min(icon_size, max(DPI(8), static_cast<int>(m_pDC->GetTextExtent(L"0").cy)));
 
         //按分组把m_item_widths分成若干段
         struct GroupSegment
@@ -976,9 +1009,11 @@ void CTaskBarDlg::CalculateWindowSize()
             seg.last = j;
             const std::wstring& icon_path = theApp.m_taskbar_data.groups.GetGroup(seg.group).icon_path;
             if (!icon_path.empty() && TaskbarGroupIcons::Get(icon_path, icon_size, GroupIconColor()) != NULL)
-                seg.icon_width = icon_size + item_space;
+                seg.icon_width = icon_size + icon_gap;
+            if (seg.icon_width > 0)
+                m_item_widths[seg.first].left_align_value = true;
             //先在原点处排列一次以得到分组需要的宽度
-            seg.content_width = LayoutGroupItems(seg.first, seg.last, 0);
+            seg.content_width = LayoutGroupItems(seg.first, seg.last, 0, item_gap);
             segments.push_back(seg);
             i = j;
         }
@@ -998,7 +1033,9 @@ void CTaskBarDlg::CalculateWindowSize()
         int slot_x = 0;
         for (const auto& seg : segments)
         {
-            LayoutGroupItems(seg.first, seg.last, slot_x + seg.icon_width);
+            //上下两行排列时，项目左侧本身带有一个项目间距，需要扣除，保证图标到文字的距离不超过一个空格
+            int content_x = slot_x + seg.icon_width - ((seg.icon_width > 0 && !row_mode) ? item_gap : 0);
+            LayoutGroupItems(seg.first, seg.last, content_x, item_gap);
 
             GroupLayout group_layout;
             group_layout.group_index = seg.group;
